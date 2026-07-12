@@ -2,12 +2,11 @@
 KidsCrew — Fireworks AI agents.
 Produces child-friendly explanation, wonder cards, quiz, study plan, and image.
 
-Tasks run concurrently via ThreadPoolExecutor for a ~4× speed-up.
+Tasks run sequentially to stay within free-tier RAM limits (512 MB).
 Each task result is extracted independently so a single parse failure
 never wipes out the whole response.
 """
 import logging
-from concurrent.futures import ThreadPoolExecutor
 from crewai import Crew, Process
 from backend.crews.parse_utils import extract_json, safe_dict, safe_list
 from backend.config.fallbacks import FALLBACK_RESPONSES
@@ -37,38 +36,19 @@ def run_kids_crew(safe_prompt: str, visual_prompt: str, domain: str, raw_prompt:
     image_tool = FireworksImageTool()
     _fallback = FALLBACK_RESPONSES["kids"]
 
-    # ── Launch all content tasks in parallel ──────────────────────────────────
-    # max_workers=2 to stay within Railway/Render free-tier memory limits (512 MB).
-    futures = {}
-    with ThreadPoolExecutor(max_workers=2) as pool:
-        futures["explanation"] = pool.submit(
-            _run_single,
-            make_wonder_narrator,
-            lambda a: make_kids_explanation_task(a, safe_prompt, raw_prompt),
-        )
-        futures["wonder"] = pool.submit(
-            _run_single,
-            make_wonder_curator,
-            lambda a: make_wonder_task(a, safe_prompt, "kids", raw_prompt),
-        )
-        futures["quiz"] = pool.submit(
-            _run_single,
-            make_quiz_elf,
-            lambda a: make_quiz_task(a, safe_prompt, "kids", raw_prompt),
-        )
-        futures["visual"] = pool.submit(
-            _run_single,
-            make_art_whisperer,
-            lambda a: make_visual_task(a, visual_prompt, domain, "kids"),
-        )
-
-    # 130 s per-task wall-clock cap: LLM timeout=120 s + 10 s overhead.
-    # This prevents one hung task from blocking the entire response.
-    _TASK_TIMEOUT = 130
+    # ── Run tasks sequentially to stay within free-tier RAM (512 MB) ──────────
+    # Parallel execution caused OOM kills on Railway/Render free tier, causing
+    # tasks to fail silently and return fallback empty data.
+    task_defs = [
+        ("explanation", make_wonder_narrator, lambda a: make_kids_explanation_task(a, safe_prompt, raw_prompt)),
+        ("wonder",      make_wonder_curator,  lambda a: make_wonder_task(a, safe_prompt, "kids", raw_prompt)),
+        ("quiz",        make_quiz_elf,        lambda a: make_quiz_task(a, safe_prompt, "kids", raw_prompt)),
+        ("visual",      make_art_whisperer,   lambda a: make_visual_task(a, visual_prompt, domain, "kids")),
+    ]
     results = {}
-    for key, fut in futures.items():
+    for key, agent_factory, task_factory in task_defs:
         try:
-            results[key] = fut.result(timeout=_TASK_TIMEOUT)
+            results[key] = _run_single(agent_factory, task_factory)
         except Exception as exc:
             logger.warning("kids_crew task '%s' failed: %s", key, exc)
             results[key] = None
