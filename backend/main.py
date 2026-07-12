@@ -45,6 +45,7 @@ from fastapi.responses import JSONResponse
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
+from starlette.requests import Request as StarletteRequest
 
 from backend.config.islamic_policy import APPROVED_DOMAINS, check_deny_list, check_domain
 from backend.config.fallbacks import FALLBACK_RESPONSES
@@ -66,7 +67,19 @@ TASK_TTL_SECONDS = 600         # 10 minutes — prune completed tasks older than
 MAX_BODY_SIZE_BYTES = 64_000   # 64 KB
 
 # ── Rate limiter ─────────────────────────────────────────────────────────────
-limiter = Limiter(key_func=get_remote_address, default_limits=["60/minute"])
+def _get_real_ip(request: StarletteRequest) -> str:
+    """
+    Extract the real client IP from Railway / any reverse-proxy that sets
+    X-Forwarded-For.  Falls back to the direct connection address so that
+    slowapi never receives an empty string (which causes a 422 instead of 429).
+    """
+    forwarded_for = request.headers.get("X-Forwarded-For", "")
+    if forwarded_for:
+        # X-Forwarded-For may be a comma-separated list; take the first entry
+        return forwarded_for.split(",")[0].strip()
+    return get_remote_address(request) or "unknown"
+
+limiter = Limiter(key_func=_get_real_ip, default_limits=["60/minute"])
 
 # ── In-memory task store ─────────────────────────────────────────────────────
 # Each request gets an isolated entry; no shared mutable state between requests.

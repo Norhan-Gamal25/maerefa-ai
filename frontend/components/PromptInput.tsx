@@ -26,7 +26,7 @@ export default function PromptInput({ onSubmit, onStop, loading, mode }: Props) 
 
   const handleSubmit = () => {
     const prompt = value.trim()
-    if (!prompt || loading) return
+    if (!prompt || prompt.length < 3 || loading) return
     const full = domainHint ? `${prompt} [domain: ${domainHint}]` : prompt
     onSubmit(full)
   }
@@ -90,7 +90,7 @@ export default function PromptInput({ onSubmit, onStop, loading, mode }: Props) 
         ) : (
           <button
             onClick={handleSubmit}
-            disabled={!value.trim()}
+            disabled={!value.trim() || value.trim().length < 3}
             style={{
               alignSelf: 'flex-end',
               background: theme.accent,
@@ -99,8 +99,8 @@ export default function PromptInput({ onSubmit, onStop, loading, mode }: Props) 
               padding: '0.55rem 1rem',
               color: '#000',
               fontWeight: 700,
-              cursor: !value.trim() ? 'not-allowed' : 'pointer',
-              opacity: !value.trim() ? 0.5 : 1,
+              cursor: (!value.trim() || value.trim().length < 3) ? 'not-allowed' : 'pointer',
+              opacity: (!value.trim() || value.trim().length < 3) ? 0.5 : 1,
               transition: 'opacity 0.2s',
               fontSize: '0.9rem',
             }}
