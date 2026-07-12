@@ -38,8 +38,10 @@ def run_college_crew(safe_prompt: str, visual_prompt: str, domain: str, raw_prom
     _fallback = FALLBACK_RESPONSES["college"]
 
     # ── Launch all content tasks in parallel ──────────────────────────────────
+    # max_workers=2 to stay within Railway/Render free-tier memory limits (512 MB).
+    # explanation + wonder run first, then quiz + visual in the second batch.
     futures = {}
-    with ThreadPoolExecutor(max_workers=4) as pool:
+    with ThreadPoolExecutor(max_workers=2) as pool:
         futures["explanation"] = pool.submit(
             _run_single,
             make_scholar,

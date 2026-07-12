@@ -38,8 +38,9 @@ def run_researcher_crew(safe_prompt: str, visual_prompt: str, domain: str, raw_p
     _fallback = FALLBACK_RESPONSES["researcher"]
 
     # ── Launch all content tasks in parallel ──────────────────────────────────
+    # max_workers=2 to stay within Railway/Render free-tier memory limits (512 MB).
     futures = {}
-    with ThreadPoolExecutor(max_workers=4) as pool:
+    with ThreadPoolExecutor(max_workers=2) as pool:
         futures["explanation"] = pool.submit(
             _run_single,
             make_research_analyst,
