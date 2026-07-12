@@ -63,12 +63,12 @@ def make_researcher_explanation_task(agent, safe_prompt: str, raw_prompt: str = 
             f"Produce a researcher-level analysis of: '{safe_prompt}'\n\n"
             "Return exactly this JSON shape (no extra keys):\n"
             '{"state_of_knowledge":"...","research_gaps":["..."],"cross_domain_links":["..."],"research_directions":["..."],"key_references":["..."]}\n\n'
-            "- state_of_knowledge: 6–8 sentences covering the current consensus, major experimental or theoretical milestones, and unresolved tensions in the literature\n"
-            "- research_gaps: 6–7 specific open problems, each described in 2–3 sentences that explain why the gap exists and what solving it would unlock\n"
-            "- cross_domain_links: 6 connections to other STEM or social-science fields, each with 2 sentences on how the connection manifests and why it is non-obvious\n"
-            "- research_directions: 6 novel approaches worth pursuing, each with 2–3 sentences of scientific rationale and expected impact\n"
-            "- key_references: 6 citation-formatted landmark papers (Author et al., Year, Venue) each with 2 sentences on their contribution and lasting influence\n"
-            "IMPORTANT: No living organisms, animals, or people."
+            "- state_of_knowledge: 3–4 sentences covering the current consensus and major milestones\n"
+            "- research_gaps: 4 specific open problems, 1–2 sentences each\n"
+            "- cross_domain_links: 4 connections to other STEM fields, 1 sentence each\n"
+            "- research_directions: 4 novel approaches, 1–2 sentences each\n"
+            "- key_references: 4 landmark papers (Author et al., Year) with 1 sentence on their contribution\n"
+            "IMPORTANT: No living organisms, animals, or people. Keep each field concise to avoid truncation."
         ),
         expected_output='{"state_of_knowledge":"...","research_gaps":[...],"cross_domain_links":[...],"research_directions":[...],"key_references":[...]}',
         agent=agent,
