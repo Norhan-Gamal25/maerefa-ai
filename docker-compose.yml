@@ -1,0 +1,82 @@
+networks:
+  maerefa-net:
+    driver: bridge
+    internal: false   # frontend needs to reach the internet; backend is isolated by routing
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    # Exposed to host so the browser can call the API directly
+    ports:
+      - "8000:8000"
+    expose:
+      - "8000"
+    networks:
+      - maerefa-net
+    env_file: .env
+    environment:
+      - ENVIRONMENT=production
+      # Prevent litellm from fetching model pricing from GitHub on startup.
+      # Eliminates a network round-trip that can cause a race condition when
+      # crewAI's lazy LiteLLM loader is called by concurrent request threads.
+      - LITELLM_LOCAL_MODEL_COST_MAP=True
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+    restart: unless-stopped
+    # Security hardening
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m,mode=1777
+      # mem0, crewai, and langchain all write config/cache to $HOME at startup
+      - /home/maerefa:size=128m,mode=0700,uid=100,gid=101
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 1024M
+        reservations:
+          memory: 256M
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+      args:
+        # Must be a build arg — Next.js bakes NEXT_PUBLIC_* into the JS bundle at build time
+        NEXT_PUBLIC_API_URL: "http://localhost:8000"
+    ports:
+      - "3000:3000"
+    networks:
+      - maerefa-net
+    env_file: .env
+    environment:
+      # Server-side URL (container-to-container via internal network)
+      - INTERNAL_BACKEND_URL=http://backend:8000
+      # Client-side URL — browser calls the backend directly on the exposed port
+      - NEXT_PUBLIC_API_URL=http://localhost:8000
+      - ENVIRONMENT=production
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m,mode=1777
+      - /app/.next/cache:size=256m
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 512M
+        reservations:
+          memory: 128M

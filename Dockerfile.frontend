@@ -1,0 +1,46 @@
+# ── Frontend Dockerfile (Next.js 14, standalone output) ──────────────────────
+FROM node:20-alpine AS base
+WORKDIR /app
+
+# ── Dependencies ─────────────────────────────────────────────────────────────
+FROM base AS deps
+# Copy package files; use npm ci if lock file exists, else npm install
+COPY frontend/package.json frontend/package-lock.json* ./
+RUN if [ -f package-lock.json ]; then npm ci --no-audit; else npm install --no-audit; fi
+
+# ── Build ─────────────────────────────────────────────────────────────────────
+FROM base AS builder
+COPY --from=deps /app/node_modules ./node_modules
+COPY frontend/ ./
+
+# NEXT_PUBLIC_* vars must be available at BUILD time — they get baked into
+# the browser JS bundle by Next.js. Accept them as build args.
+ARG NEXT_PUBLIC_API_URL=http://localhost:8000
+ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+ENV NEXT_TELEMETRY_DISABLED=1
+
+RUN npm run build
+
+# ── Runtime ──────────────────────────────────────────────────────────────────
+FROM node:20-alpine AS runtime
+
+RUN addgroup -S maerefa && adduser -S -G maerefa maerefa
+
+WORKDIR /app
+
+COPY --from=builder /app/public ./public
+COPY --from=builder --chown=maerefa:maerefa /app/.next/standalone ./
+COPY --from=builder --chown=maerefa:maerefa /app/.next/static ./.next/static
+
+USER maerefa
+
+ENV NEXT_TELEMETRY_DISABLED=1 \
+    NODE_ENV=production
+
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
+  CMD wget -q --spider http://localhost:3000 || exit 1
+
+EXPOSE 3000
+ENV PORT=3000
+ENV HOSTNAME="0.0.0.0"
+CMD ["node", "server.js"]

@@ -1,0 +1,30 @@
+{
+  "name": "Maerefa Online Workflow",
+  "description": "Visual representation of Maerefa Online's Guardrail → Router → Mode Crew pipeline",
+  "version": "1.0",
+  "nodes": [
+    { "id": "1", "type": "input", "label": "User Prompt" },
+    { "id": "2", "type": "agent", "label": "STEM Sentinel (Gemma 7B)", "note": "Domain validation + mode classification + visual prompt" },
+    { "id": "3", "type": "router", "label": "Route by Mode", "routes": ["kids", "college", "researcher"] },
+    { "id": "4", "type": "crew", "label": "KidsCrew", "agents": ["Wonder Narrator", "Wonder Curator", "Quiz Elf", "Journey Mapper", "Art Whisperer"] },
+    { "id": "5", "type": "crew", "label": "CollegeCrew", "agents": ["The Scholar", "Wonder Weaver", "The Examiner", "Curriculum Designer", "Diagram Director"] },
+    { "id": "6", "type": "crew", "label": "ResearcherCrew", "agents": ["Research Analyst", "Frontier Scout", "Peer Reviewer", "Grant Strategist", "Data Cartographer"] },
+    { "id": "7", "type": "tool", "label": "FireworksImageTool (SDXL)", "note": "ISLAMIC_NEGATIVE_PROMPT always applied" },
+    { "id": "8", "type": "output", "label": "Complete Learning Package", "components": ["explanation", "wonder_cards", "quiz", "study_plan", "image"] }
+  ],
+  "edges": [
+    { "from": "1", "to": "2" },
+    { "from": "2", "to": "3" },
+    { "from": "3", "to": "4", "label": "kids" },
+    { "from": "3", "to": "5", "label": "college" },
+    { "from": "3", "to": "6", "label": "researcher" },
+    { "from": "4", "to": "7" },
+    { "from": "5", "to": "7" },
+    { "from": "6", "to": "7" },
+    { "from": "7", "to": "8" }
+  ],
+  "llms": {
+    "gemma_7b": { "provider": "fireworks", "model": "accounts/fireworks/models/gemma-7b-it", "hardware": "AMD Instinct GPU via ROCm" },
+    "granite_13b": { "provider": "ibm_watsonx", "model": "ibm/granite-13b-chat-v2" }
+  }
+}
