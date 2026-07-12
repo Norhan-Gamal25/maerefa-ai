@@ -189,6 +189,7 @@ app.add_middleware(
     allow_origins=[
         "http://localhost:3000",
         "http://localhost:3001",
+        "https://maerefa-ai.vercel.app",
         _frontend_url,
     ],
     allow_credentials=True,
