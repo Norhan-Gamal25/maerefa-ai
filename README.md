@@ -1,8 +1,6 @@
 # Maerefa AI — معرفة
 ### Where Creativity Meets STEM
 
-> **Live Demo:** [maerefa-ai.vercel.app](https://maerefa-ai.vercel.app)
-> **Backend API:** [maerefa-backend on Railway](https://maerefa-backend.up.railway.app)
 
 ---
 
